@@ -8,7 +8,7 @@ The workshop is scheduled for:
 
 ## Schedule  
 - Monday: Remote sensing data: what's available and how to access (prerequisites: none)  
-- Tuesday: Remote sensing image analysis (water quantification) with GDAL (in R) (prerequisites: familiarity with R or Python)  
+- Tuesday: Remote sensing image analysis (water quantification) with Raster and GDAL (in R) (prerequisites: familiarity with R or Python)  
 - Wednesday: Google Earth Engine basics and working with time series (prerequisites: familiarity with any computer language)  
 - Thursday: Land Deformation with InSAR (prerequisites: familiarity with any computer language)  
 
