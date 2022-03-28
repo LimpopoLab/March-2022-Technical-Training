@@ -26,7 +26,7 @@ WET1 <- WET[59,134,]
 WET2 <- WET[60,135,]
 WET3 <- WET[61, 136,]
 WET <- data.frame(Date,WET1, WET2,WET3) # 3 mascons that lie within the limpopo river basin in South Africa
-WET$mean <- rowMeans(WET_SM[,c(2,3,4)], na.rm = TRUE) # average 3 mascon values
+WET$mean <- rowMeans(WET[,c(2,3,4)], na.rm = TRUE) # average 3 mascon values
 
 ggplot(WET, aes(x = Date, y = mean)) + # plot data
   geom_point()+
@@ -36,5 +36,5 @@ ggplot(WET, aes(x = Date, y = mean)) + # plot data
 
 
 
-write.csv(WET_SM,file="SMGRACE.csv",row.names = TRUE) # create csv with water equivalent thickness data
+write.csv(WET,file="SMGRACE.csv",row.names = TRUE) # create csv with water equivalent thickness data
 
