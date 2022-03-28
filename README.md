@@ -12,22 +12,7 @@ The workshop is scheduled for:
 - Wednesday: Google Earth Engine basics and working with time series (prerequisites: familiarity with any computer language)  
 - Thursday: Land Deformation with InSAR (prerequisites: familiarity with any computer language)  
 
-## Pre-workshop Resources  
-### Remote Sensing Resources (Monday)  
-- [Session resources](https://duq.app.box.com/s/ba44j23gemhrqo9e50ta2p4qje4w8cit)  
-- Material linked in Wiki (above)  
-
-### R/RStudio  
-- [Installation video](https://youtu.be/8dL-y_1p3Kw)  
-- [R software](https://cran.r-project.org/mirrors.html)  
-- [RStudio](https://www.rstudio.com/products/rstudio/download/#download)  
-
-### Google Earth Engine  
-It is recommended that you request Google Earth Engine access prior to the training:
-- [Request access](https://earthengine.google.com/signup/) (you may need to set up a Google account prior to this step)  
-- [Code editor](https://code.earthengine.google.com/)  
-
-
+**See the wiki pages for more information**  
 
 ## Acknowledgements  
 This work was supported by the United States Agency for International Development, Southern Africa Regional Mission, Fixed Amount Award 72067419FA00001. This work reflects the work of the authors and does not necessarily reflect the views of USAID or the United States Government.  For more information, see the project website at [www.duq.edu/limpopo](https://www.duq.edu/limpopo).  
