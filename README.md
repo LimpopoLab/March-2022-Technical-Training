@@ -13,6 +13,10 @@ The workshop is scheduled for:
 - Thursday: Land Deformation with InSAR (prerequisites: familiarity with any computer language)  
 
 ## Pre-workshop Resources  
+### Remote Sensing Resources (Monday)  
+- [Session resources](https://duq.app.box.com/s/ba44j23gemhrqo9e50ta2p4qje4w8cit)  
+- Material linked in Wiki (above)  
+
 ### R/RStudio  
 - [Installation video](https://youtu.be/8dL-y_1p3Kw)  
 - [R software](https://cran.r-project.org/mirrors.html)  
