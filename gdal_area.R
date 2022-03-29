@@ -2,8 +2,8 @@
 # Technical Training - March 2022
 # Remote sensing image analysis (water quantification) with GDAL
 
-# This example code will measure the width of a river at a pre-programmed 
-# location based on NDWI values.
+# This example code will measure the area of water based on NDWI values within 
+# a pre-programmed areas.
 
 # This work was supported by the United States Agency for International 
 # Development, Southern Africa Regional Mission, Fixed Amount Award 
@@ -19,19 +19,22 @@ library(sp)
 library(rgeos) # gCovers - test extents, not needed to crop
 library(dplyr) # used first in rename - general data frame management 
 library(ggplot2) # plotting tools (histogram)
-library(methods)
 
 # Set your working directory.  Avoid spaces in your path and OneDrive
-setwd("/Volumes/T7/planet/mutale/2021/20210219_074647_1009/analytic_udm2/")
+setwd("/Volumes/T7/planet/weir/")
 
 # ------------------------------------------------------------------------------
 ## IMPORT IMAGE, CROP, ADJUST TO TOA(if needed)
 # Import raster image
-pic <- stack("20210219_074647_1009_3B_AnalyticMS.tif")
+pic <- stack("20210802_072057_91_2430_3B_AnalyticMS_SR_8b_harmonized.tif") # Aug
+# pic <- stack("20210903_071821_66_2421_3B_AnalyticMS_SR_8b_harmonized.tif") # Sep
+# pic <- stack("20211009_071655_67_2459_3B_AnalyticMS_SR_8b_harmonized.tif") # Oct
+# pic <- stack("20211202_071519_29_2420_3B_AnalyticMS_SR_8b_harmonized.tif") # Dec
+# pic <- stack("20220102_071539_49_242d_3B_AnalyticMS_SR_8b_harmonized.tif") # Jan
 
 # To crop the image, first, check the extent, then crop
-## Mutale River downstream
-crp_ext <- as(extent(245850, 246350, 7478700, 7479200), 'SpatialPolygons') # Desired extent and crop limits
+## Mutale Weir
+crp_ext <- as(extent(246825, 247075, 7479485, 7479710), 'SpatialPolygons') # Desired extent and crop limits
 crs(crp_ext) <- "+proj=utm +zone=36 +datum=WGS84"
 pic_ext <- as(extent(pic), 'SpatialPolygons') # Extent of image
 crs(pic_ext) <- "+proj=utm +zone=36 +datum=WGS84"
@@ -41,30 +44,39 @@ if (gCovers(pic_ext,crp_ext)) { # returns TRUE if no point in spgeom2 (e, needed
 }
 
 # If you need the reflectance coefficients from Planet metadata xml file
-md <- xmlParse("20210219_074647_1009_3B_AnalyticMS_metadata.xml")
-rc <- setNames(xmlToDataFrame(node=getNodeSet(md, "//ps:EarthObservation/gml:resultOf/ps:EarthObservationResult/ps:bandSpecificMetadata/ps:reflectanceCoefficient")),"reflectanceCoefficient")
-rc <- as.matrix(rc)
-# 1 Red
-# 2 Green
-# 3 Blue
-# 4 Near infrared
-rc2 <- as.numeric(rc[2]) # Green
-rc4 <- as.numeric(rc[4]) # NIR
-rm(rc, md)
+# md <- xmlParse("20210219_074647_1009_3B_AnalyticMS_metadata.xml")
+# rc <- setNames(xmlToDataFrame(node=getNodeSet(md, "//ps:EarthObservation/gml:resultOf/ps:EarthObservationResult/ps:bandSpecificMetadata/ps:reflectanceCoefficient")),"reflectanceCoefficient")
+# rc <- as.matrix(rc)
+# # 1 Red
+# # 2 Green
+# # 3 Blue
+# # 4 Near infrared
+# rc2 <- as.numeric(rc[2]) # Green
+# rc4 <- as.numeric(rc[4]) # NIR
+# rm(rc, md)
+# surface reflectance (SR) images do not need adjustment
 
-# Calculate NDWI using the green (band 2) and nir (band 4) bands
-ndwi <- ((rc2*pic[[2]]) - (rc4*pic[[4]])) / ((rc2*pic[[2]]) + (rc4*pic[[4]]))
+# Calculate NDWI using the green and NIR bands: (G-NIR)/(G+NIR)
+# 4-band: green (band 2) and NIR (band 4)
+#ndwi <- ((pic[[2]]) - (pic[[4]])) / ((pic[[2]]) + (pic[[4]]))
+# 8-band: green (band 4) and NIR (band 8)
+ndwi <- ((pic[[4]]) - (pic[[8]])) / ((pic[[4]]) + (pic[[8]]))
 
 # To see new NDWI image
-plot(ndwi)
 rm(pic) # to free up RAM
+ndwi_df <- as.data.frame(ndwi, xy = TRUE)
+ggplot() + 
+     geom_raster(data=ndwi_df, aes(x=x,y=y,fill=layer)) +
+     scale_fill_gradientn(colours = topo.colors(5), limits = c(-1,0.1)) +
+     theme(axis.text = element_blank(), axis.title = element_blank())
 
-writeRaster(x = ndwi, 
-            filename= "20210219_ndwi.tif",
+writeRaster(ndwi, 
+            filename= "20220102_ndwi.tif",
             format = "GTiff", # save as a tif, save as a FLOAT if not default, not integer
             overwrite = TRUE)  # OPTIONAL - be careful. This will OVERWRITE previous files.
 
-# ndwi <- stack("20210219_ndwi.tif")
+# ndwi_dry <- stack("20210802_ndwi.tif")
+# ndwi_wet <- stack("20220102_ndwi.tif")
 
 # ------------------------------------------------------------------------------
 ## TO DETERMINE WATER THRESHOLD
@@ -166,7 +178,7 @@ h <- ggplot(ndwi_values, aes(x=data)) +
      theme(aspect.ratio = 1) +
      theme(axis.text = element_text(face = "plain", size = 24)) +
      theme(axis.title = element_text(face = "plain", size = 24))
-ggsave("20210219_hist.eps", h, device = "eps", dpi = 72)
+ggsave("20210102_hist.eps", h, device = "eps", dpi = 72)
 
 # Analysis
 # The two-peak analysis provides a more stable threshold value by visual 
@@ -174,108 +186,21 @@ ggsave("20210219_hist.eps", h, device = "eps", dpi = 72)
 ndwi_threshold <- twopeak
 
 # ------------------------------------------------------------------------------
-## SEARCH ALONG THE PREDETERMINED TRANSECT
+## CALCULATE AREA
 
-# Transect for Mutale River near Tshandama
-# 246130, 7478894
-# 246066, 7479006, UTM Zone 36S
-x1 <- (246066)
-x2 <- (246130)
-y1 <- (7479006)
-y2 <- (7478894)
+# If it is sufficient to compare number of pixels:
+no_of_pixels <- sum(ndwi[] >= ndwi_threshold)
 
-# Determine coordinates for the transect line
-ma <- (y2-y1)/(x2-x1) # this relies on UTM (the coordinates are in meters)
-ra <- (0.1) # r is the step size of each point along our width
-t <- sqrt(((x2-x1)^2) + ((y2-y1)^2)) # length along search transect
-f <- ceiling(t/ra) # number of nodes along the transect
-pointers <- array(999.999, dim = c(f,2)) # preallocation for coordinates
-pointers[1,1] <- x1
-pointers[1,2] <- y1
-for (i in 2:f){
-     a <- 1
-     b <- (-2)*pointers[i-1,1]
-     c <- (pointers[i-1,1]^2) - (ra^2)/((ma^2)+1)
-     pointers[i,1] <- ((-b)+(sqrt((b^2)-4*a*c)))/(2*a)
-     pointers[i,2] <- ((pointers[i-1,2])+(ma*((pointers[i,1])-(pointers[i-1,1]))))
-}
-spat <- SpatialPoints(pointers)
-
-# Determine the NDWI value along the transect line
-alng <- extract(ndwi, spat, method='simple')
-vals <- data.frame(pointers,alng)
-n <- ggplot(vals) +
-     geom_point(aes(x=X1, y=alng)) +
-     geom_hline(aes(yintercept=ndwi_threshold), color = "blue") +
-     xlab("Easting") +
-     ylab("NDWI") +
-     theme(panel.background = element_rect(fill = "white", colour = "black")) +
-     theme(aspect.ratio = 1) +
-     theme(axis.text = element_text(face = "plain", size = 24)) +
-     theme(axis.title = element_text(face = "plain", size = 24))
-ggsave("20210219_trans.eps", n, device = "eps", dpi = 72)
-
-# Determine pixel midpoints
-RDB <- -9999 # preallocate 
-LDB <- -9999
-alng_per <- array(-9, dim=c(f,2)) #allocation for the midpoints
-# when you reach -9 in that array, you've reached the end of the midpoints/values found
-restart <- 2 #initial start for i search
-for (j in 1:f){
-     cnt <- 1
-     for (i in restart:f) {
-          if (is.na(alng[i])==FALSE) {
-               if (alng[i]==alng[i-1]) { # determines if the next value is equal
-                    cnt <- cnt + 1 # counts how many values there are
-               } else {
-                    restart <- i + 1 #to keep moving forward from the last section without causing a loop at the end of it
-                    break # breaks from current for loop.
-               }
-          }
-     }
-     mp <- ((cnt*ra)/2) #ra is the spacing, and mp gives the midpoint of the current distance section
-     if (is.na(alng[i-1])==FALSE) {
-          if (i<(f)) {
-               alng_per[j,1] <- (((i-1)*ra)-mp) 
-               alng_per[j,2] <- alng[i-1] 
-          } else {
-               alng_per[j,1] <- ((f*ra)-mp) 
-               alng_per[j,2] <- alng[i-1] 
-          }
-     }
-     if (i>=(f)) {
-          break
-     } 
-}
-
-# Determine where the NDWI values cross the threshold
-for (i in (2:f)){
-     if (alng_per[i,2]>ndwi_threshold){
-          if (alng_per[i-1,2]<ndwi_threshold){
-               i1 <- alng_per[i-1,1]
-               i2 <- alng_per[i,1]
-               j1 <- alng_per[i-1,2]
-               j2 <- alng_per[i,2]
-               n <- ndwi_threshold    
-               RDB <- ((n-(j1))*((i2-i1)/(j2-j1))+i1)
-               break
-          }
-     }
-}
-for (i in 1:(f-1)){
-     if (alng_per[f-i,2]>ndwi_threshold){        #expressing the index such that when i = 1, f, and when i = 2, f-1.
-          if (alng_per[f-i+1,2]<ndwi_threshold){
-               i1 <- alng_per[f-i+1,1]
-               i2 <- alng_per[f-1,1]
-               j1 <- alng_per[f-i+1,2]
-               j2 <- alng_per[f-1,2]
-               n <- ndwi_threshold    
-               LDB <- ((n-(j1))*((i2-i1)/(j2-j1))+i1)
-               break
+# With raster:area
+# Need to reproject:
+ndwi_WGS84 <- projectRaster(ndwi, crs = "+proj=longlat +datum=WGS84 +no_defs")
+sz <- area(ndwi_WGS84) # finds areas
+sm <- 0
+for (i in 1:length(sz@data@values)) {
+     if (is.na(ndwi_WGS84@data@values[i]) == FALSE) {
+          if (ndwi_WGS84@data@values[i] >= ndwi_threshold) {
+               sm <- sm + sz@data@values[i]
           }
      }
 }
 
-# ------------------------------------------------------------------------------
-# Cross-river distance
-LDB-RDB # meters
